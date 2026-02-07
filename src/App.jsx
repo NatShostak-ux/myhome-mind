@@ -35,17 +35,9 @@ import {
 
 // --- Firebase Configuration ---
 const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
-const isDemoMode = firebaseConfig.apiKey === "placeholder";
-let app, auth, db;
-
-if (!isDemoMode) {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-} else {
-    console.warn("MyHome Mind is running in Demo Mode (Mock Firebase)");
-}
-
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'myhome-mind-v1';
 
 // --- Scandinavian Palette & Constants ---
@@ -85,15 +77,6 @@ export default function App() {
     // --- Auth Setup ---
     useEffect(() => {
         const initAuth = async () => {
-            if (isDemoMode) {
-                // Simulate auth delay for realism
-                setTimeout(() => {
-                    console.log("Running in Demo Mode (Mock Auth)");
-                    setUser({ uid: 'demo-user', isAnonymous: true });
-                }, 500);
-                return;
-            }
-
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
@@ -106,12 +89,10 @@ export default function App() {
         };
         initAuth();
 
-        if (!isDemoMode) {
-            const unsubscribe = onAuthStateChanged(auth, (u) => {
-                setUser(u);
-            });
-            return () => unsubscribe();
-        }
+        const unsubscribe = onAuthStateChanged(auth, (u) => {
+            setUser(u);
+        });
+        return () => unsubscribe();
     }, []);
 
     // --- Check for Share Link ---
@@ -124,11 +105,6 @@ export default function App() {
     // --- Data Sync ---
     useEffect(() => {
         if (!user) return;
-
-        if (isDemoMode) {
-            setLoading(false);
-            return;
-        }
 
         const params = new URLSearchParams(window.location.search);
         const shareId = params.get('share');
@@ -156,11 +132,6 @@ export default function App() {
 
     const saveData = async (newSpaces, newItems, newGroceries) => {
         if (!user || isReadOnly) return;
-
-        if (isDemoMode) {
-            // In demo mode, we rely on local state which is already updated by the action functions
-            return;
-        }
 
         try {
             const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'personal', 'settings');
@@ -242,11 +213,6 @@ export default function App() {
     const shareApp = async () => {
         if (!user) return;
 
-        if (isDemoMode) {
-            showToast('Sharing is disabled in Demo Mode');
-            return;
-        }
-
         try {
             const shareId = crypto.randomUUID();
             const publicDoc = doc(db, 'artifacts', appId, 'public', 'data', 'shares', shareId);
@@ -295,7 +261,6 @@ export default function App() {
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-medium tracking-tight">MyHome Mind</h1>
                     {isReadOnly && <span className="text-[10px] bg-[#E5DED4] px-2 py-0.5 rounded-full uppercase tracking-tighter">Shared View</span>}
-                    {isDemoMode && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full uppercase tracking-tighter">Demo Mode</span>}
                 </div>
 
                 <div className="flex items-center gap-3 flex-1 max-w-2xl">
