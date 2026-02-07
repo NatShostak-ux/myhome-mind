@@ -181,12 +181,13 @@ export default function App() {
 
         try {
             const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'personal', 'settings');
-            await setDoc(docRef, {
-                spaces: newSpaces || spaces,
-                items: newItems || items,
-                groceries: newGroceries || groceries,
-                lastUpdated: Date.now()
-            });
+
+            const updates = { lastUpdated: Date.now() };
+            if (newSpaces !== undefined && newSpaces !== null) updates.spaces = newSpaces;
+            if (newItems !== undefined && newItems !== null) updates.items = newItems;
+            if (newGroceries !== undefined && newGroceries !== null) updates.groceries = newGroceries;
+
+            await setDoc(docRef, updates, { merge: true });
         } catch (err) {
             console.error("Firestore write error:", err);
         }
