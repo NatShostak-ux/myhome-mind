@@ -34,11 +34,43 @@ import {
 } from 'firebase/firestore';
 
 // --- Firebase Configuration ---
-const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'myhome-mind-v1';
+const getFirebaseConfig = () => {
+    // 1. Try environment variables (Vite standard)
+    if (import.meta.env.VITE_FIREBASE_API_KEY) {
+        return {
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+            appId: import.meta.env.VITE_FIREBASE_APP_ID
+        };
+    }
+    // 2. Fallback to window object (legacy/injection)
+    if (window.__firebase_config) {
+        return typeof window.__firebase_config === 'string'
+            ? JSON.parse(window.__firebase_config)
+            : window.__firebase_config;
+    }
+    return null;
+};
+
+const firebaseConfig = getFirebaseConfig();
+let app = null;
+let auth = null;
+let db = null;
+
+if (firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== 'placeholder') {
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+    } catch (e) {
+        console.error("Firebase Initialization Error:", e);
+    }
+}
+
+const appId = import.meta.env.VITE_APP_ID || (typeof window.__app_id !== 'undefined' ? window.__app_id : 'myhome-mind-v1');
 
 // --- Scandinavian Palette & Constants ---
 const COLORS = {
@@ -222,7 +254,7 @@ export default function App() {
     };
 
     const shareApp = async () => {
-        if (!user) return;
+        if (!user || !db) return;
 
         try {
             const shareId = crypto.randomUUID();
@@ -244,12 +276,33 @@ export default function App() {
             }
         } catch (err) {
             console.error("Share error:", err);
+            showToast('Error creating share link');
         }
     };
 
     // --- Filtering ---
     const filteredSpaces = spaces.filter(s => (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
     const filteredGroceries = groceries.filter(g => (g.text || '').toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (!app || !auth) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#FBFBF9] p-8 text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h1 className="text-2xl font-medium tracking-tight mb-4">Configuration Required</h1>
+                <p className="text-[#717171] max-w-md mb-8">
+                    MyHome Mind requires a valid Firebase configuration to run.
+                    Please set up your environment variables or check your deployment settings.
+                </p>
+                <div className="bg-white p-6 rounded-xl border border-[#ECECEC] text-left max-w-lg w-full shadow-sm">
+                    <h3 className="text-sm font-medium mb-3">Required Environment Variables:</h3>
+                    <code className="block text-xs text-[#717171] bg-[#F5F5F5] p-4 rounded-lg overflow-x-auto">
+                        VITE_FIREBASE_API_KEY=...<br />
+                        VITE_FIREBASE_AUTH_DOMAIN=...<br />
+                        VITE_FIREBASE_PROJECT_ID=...
+                    </code>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) return (
         <div className="min-h-screen flex items-center justify-center bg-[#FBFBF9]" style={{ fontFamily: 'Outfit, sans-serif' }}>
