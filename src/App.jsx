@@ -166,16 +166,27 @@ export default function App() {
         saveData(null, null, updated);
     };
 
-    const handleFileUpload = (spaceId, e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+    const handleSpaceImageUpload = (spaceId, file) => {
         const reader = new FileReader();
         reader.onloadend = () => {
-            const updated = spaces.map(s => s.id === spaceId ? { ...s, image: reader.result } : s);
-            setSpaces(updated);
-            saveData(updated, null, null);
+            const newSpaces = spaces.map(s => s.id === spaceId ? { ...s, image: reader.result } : s);
+            setSpaces(newSpaces);
+            saveData(newSpaces, undefined, undefined);
         };
-        reader.readAsDataURL(file);
+        if (file) reader.readAsDataURL(file);
+    };
+
+    const handleItemImageUpload = (itemId, file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const newItems = items.map(i => i.id === itemId ? { ...i, image: reader.result } : i);
+            setItems(newItems);
+            if (selectedItem && selectedItem.id === itemId) {
+                setSelectedItem({ ...selectedItem, image: reader.result });
+            }
+            saveData(undefined, newItems, undefined);
+        };
+        if (file) reader.readAsDataURL(file);
     };
 
     const addItemToSpace = (spaceId) => {
@@ -465,14 +476,32 @@ export default function App() {
                 <div className="fixed inset-0 z-[60] bg-black/10 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
                         <div className="p-8 border-b border-[#ECECEC] flex items-center justify-between">
-                            <div className="flex-1">
-                                <input
-                                    readOnly={isReadOnly}
-                                    className="text-2xl font-light border-none focus:ring-0 p-0 w-full"
-                                    value={selectedItem.name || ''}
-                                    onChange={(e) => updateItem(selectedItem.id, { name: e.target.value })}
-                                />
-                                <p className="text-[11px] text-[#717171] uppercase tracking-widest mt-1">Comparison Engine</p>
+                            <div className="flex-1 flex items-center gap-5">
+                                <div className="relative group w-20 h-20 bg-[#F5F5F5] rounded-xl overflow-hidden shrink-0">
+                                    {selectedItem.image ? (
+                                        <img src={selectedItem.image} alt="Item" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-[#BCBCBC]">
+                                            <ImageIcon className="w-6 h-6 opacity-20" />
+                                        </div>
+                                    )}
+                                    {!isReadOnly && (
+                                        <label className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                            <Plus className="w-5 h-5 text-white drop-shadow-md" />
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleItemImageUpload(selectedItem.id, e.target.files[0])} />
+                                        </label>
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <input
+                                        readOnly={isReadOnly}
+                                        className="text-2xl font-light border-none focus:ring-0 p-0 w-full bg-transparent"
+                                        value={selectedItem.name || ''}
+                                        onChange={(e) => updateItem(selectedItem.id, { name: e.target.value })}
+                                        placeholder="Item Name"
+                                    />
+                                    <p className="text-[11px] text-[#717171] uppercase tracking-widest mt-1">Comparison Engine</p>
+                                </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 {!isReadOnly && (
