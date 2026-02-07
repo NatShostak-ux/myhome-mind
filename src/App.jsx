@@ -294,6 +294,20 @@ export default function App() {
         }
     };
 
+    const handleOptionImageUpload = (itemId, optionIndex, file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const item = items.find(i => i.id === itemId);
+            if (!item) return;
+            const newOptions = [...(item.options || [])];
+            if (newOptions[optionIndex]) {
+                newOptions[optionIndex] = { ...newOptions[optionIndex], image: reader.result };
+                updateItem(itemId, { options: newOptions });
+            }
+        };
+        if (file) reader.readAsDataURL(file);
+    };
+
     // --- Filtering ---
     const filteredSpaces = spaces.filter(s => (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
     const filteredGroceries = groceries.filter(g => (g.text || '').toLowerCase().includes(searchQuery.toLowerCase()));
@@ -478,7 +492,7 @@ export default function App() {
                                             className="absolute bottom-4 right-4 p-2.5 bg-white/90 backdrop-blur rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:scale-105"
                                         >
                                             <Plus className="w-4 h-4" />
-                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(space.id, e)} />
+                                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleSpaceImageUpload(space.id, e.target.files[0])} />
                                         </label>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
@@ -535,7 +549,13 @@ export default function App() {
                                     {item.options && item.options.length > 0 ? (
                                         <div className="space-y-3">
                                             {(item.options || []).slice(0, 3).map((opt, idx) => (
-                                                <div key={idx} className={`p-3 rounded-xl border text-xs ${opt.winner ? 'bg-[#9CAF88]/5 border-[#9CAF88]/20' : 'bg-[#F9F9F9] border-transparent'}`}>
+                                                <div key={idx} className={`p-3 rounded-xl border text-xs overflow-hidden ${opt.winner ? 'bg-[#9CAF88]/5 border-[#9CAF88]/20' : 'bg-[#F9F9F9] border-transparent'}`}>
+                                                    {opt.image && (
+                                                        <div className="w-full h-24 mb-3 rounded-lg overflow-hidden relative">
+                                                            <img src={opt.image} alt={opt.model} className="w-full h-full object-cover" />
+                                                            {opt.winner && <div className="absolute top-2 right-2 bg-[#9CAF88] text-white p-1 rounded-full"><Trophy className="w-3 h-3" /></div>}
+                                                        </div>
+                                                    )}
                                                     <div className="flex justify-between font-medium mb-1">
                                                         <span>{opt.model || 'Untitled'}</span>
                                                         <span>{opt.price ? `$${opt.price}` : '—'}</span>
@@ -608,35 +628,64 @@ export default function App() {
                         <div className="flex-1 overflow-y-auto p-8 bg-[#FBFBF9]">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {(selectedItem.options || []).map((option, idx) => (
-                                    <div key={idx} className={`relative p-6 rounded-2xl border transition-all ${option.winner ? 'bg-white border-[#9CAF88] shadow-sm' : 'bg-[#FAFAFA] border-[#ECECEC]'}`}>
-                                        {!isReadOnly && (
-                                            <div className="absolute top-4 right-4 flex items-center gap-2">
-                                                <button
-                                                    onClick={() => {
-                                                        const newOptions = [...selectedItem.options];
-                                                        newOptions[idx].winner = !newOptions[idx].winner;
-                                                        if (newOptions[idx].winner) {
-                                                            newOptions.forEach((o, i) => { if (i !== idx) o.winner = false; });
-                                                        }
-                                                        updateItem(selectedItem.id, { options: newOptions });
-                                                    }}
-                                                    className={`p-2 rounded-full transition-colors ${option.winner ? 'bg-[#9CAF88] text-white' : 'bg-white text-[#717171] border border-[#ECECEC]'}`}
-                                                >
-                                                    <Trophy className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const newOptions = selectedItem.options.filter((_, i) => i !== idx);
-                                                        updateItem(selectedItem.id, { options: newOptions });
-                                                    }}
-                                                    className="p-2 bg-white text-[#717171] hover:text-red-500 rounded-full border border-[#ECECEC]"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        )}
+                                    <div key={idx} className={`relative rounded-2xl border transition-all overflow-hidden ${option.winner ? 'bg-white border-[#9CAF88] shadow-sm' : 'bg-[#FAFAFA] border-[#ECECEC]'}`}>
 
-                                        <div className="space-y-4">
+                                        {/* Option Image Header - Full Bleed */}
+                                        <div className="relative h-48 bg-[#F0F0F0] overflow-hidden group">
+                                            {option.image ? (
+                                                <img src={option.image} alt={option.model} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-[#BCBCBC]">
+                                                    <ImageIcon className="w-8 h-8 opacity-20" />
+                                                </div>
+                                            )}
+
+                                            {!isReadOnly && (
+                                                <label className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                                    <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full flex items-center gap-2 shadow-sm text-sm font-medium text-[#2D2D2D]">
+                                                        <Plus className="w-4 h-4" /> Add Image
+                                                    </div>
+                                                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleOptionImageUpload(selectedItem.id, idx, e.target.files[0])} />
+                                                </label>
+                                            )}
+
+                                            {/* Action Buttons Overlay */}
+                                            {!isReadOnly && (
+                                                <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newOptions = [...selectedItem.options];
+                                                            newOptions[idx].winner = !newOptions[idx].winner;
+                                                            if (newOptions[idx].winner) {
+                                                                newOptions.forEach((o, i) => { if (i !== idx) o.winner = false; });
+                                                            }
+                                                            updateItem(selectedItem.id, { options: newOptions });
+                                                        }}
+                                                        className={`p-2 rounded-full transition-colors shadow-sm ${option.winner ? 'bg-[#9CAF88] text-white border-none' : 'bg-white/90 backdrop-blur text-[#717171] hover:text-[#9CAF88]'}`}
+                                                        title="Mark as Winner"
+                                                    >
+                                                        <Trophy className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newOptions = selectedItem.options.filter((_, i) => i !== idx);
+                                                            updateItem(selectedItem.id, { options: newOptions });
+                                                        }}
+                                                        className="p-2 bg-white/90 backdrop-blur text-[#717171] hover:text-red-500 rounded-full shadow-sm"
+                                                        title="Delete Option"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Gradient Overlay for Text Readability if needed, though text is below */}
+                                            <div className="absolute inset-0 pointer-events-none border-b border-black/5" />
+                                        </div>
+
+                                        <div className="p-6 space-y-4">
                                             <div>
                                                 <label className="text-[10px] text-[#717171] uppercase font-bold tracking-tighter">Model / Brand</label>
                                                 <input
@@ -729,10 +778,10 @@ export default function App() {
                                 {!isReadOnly && (
                                     <button
                                         onClick={() => {
-                                            const newOption = { model: '', price: '', store: '', link: '', notes: '', winner: false };
+                                            const newOption = { model: '', price: '', store: '', link: '', notes: '', winner: false, image: null };
                                             updateItem(selectedItem.id, { options: [...(selectedItem.options || []), newOption] });
                                         }}
-                                        className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-[#ECECEC] rounded-2xl hover:border-[#D2B48C] hover:bg-white transition-all text-[#717171]"
+                                        className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-[#ECECEC] rounded-2xl hover:border-[#D2B48C] hover:bg-white transition-all text-[#717171] h-full min-h-[400px]"
                                     >
                                         <Plus className="w-8 h-8 mb-2 opacity-50" />
                                         <span className="text-xs font-medium uppercase tracking-widest">Add Option</span>
