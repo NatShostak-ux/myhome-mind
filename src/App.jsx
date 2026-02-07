@@ -284,7 +284,12 @@ export default function App() {
     };
 
     // --- Filtering ---
-    const filteredSpaces = spaces.filter(s => (s.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+    // --- Filtering ---
+    const filteredSpaces = spaces.filter(s => {
+        const matchesName = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+        const hasMatchingItems = items.some(i => i.spaceId === s.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesName || hasMatchingItems;
+    });
     const filteredGroceries = groceries.filter(g => (g.text || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!app || !auth) {
@@ -502,44 +507,47 @@ export default function App() {
                     </div>
                     <div className="flex-1 overflow-y-auto p-6 md:p-10">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {items.filter(i => i.spaceId === selectedSpace.id).map(item => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => setSelectedItem(item)}
-                                    className="bg-white p-5 rounded-2xl border border-[#ECECEC] hover:shadow-md transition-all cursor-pointer relative flex flex-col h-fit"
-                                >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <h4 className="font-medium">{item.name}</h4>
-                                        {item.options?.some(o => o.winner) && <Trophy className="w-4 h-4 text-[#9CAF88]" />}
-                                    </div>
+                            {items
+                                .filter(i => i.spaceId === selectedSpace.id)
+                                .filter(i => (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                                .map(item => (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => setSelectedItem(item)}
+                                        className="bg-white p-5 rounded-2xl border border-[#ECECEC] hover:shadow-md transition-all cursor-pointer relative flex flex-col h-fit"
+                                    >
+                                        <div className="flex justify-between items-start mb-4">
+                                            <h4 className="font-medium">{item.name}</h4>
+                                            {item.options?.some(o => o.winner) && <Trophy className="w-4 h-4 text-[#9CAF88]" />}
+                                        </div>
 
-                                    {item.options && item.options.length > 0 ? (
-                                        <div className="space-y-3">
-                                            {(item.options || []).slice(0, 3).map((opt, idx) => (
-                                                <div key={idx} className={`p-3 rounded-xl border text-xs overflow-hidden ${opt.winner ? 'bg-[#9CAF88]/5 border-[#9CAF88]/20' : 'bg-[#F9F9F9] border-transparent'}`}>
-                                                    {opt.image && (
-                                                        <div className="w-full h-24 mb-3 rounded-lg overflow-hidden relative">
-                                                            <img src={opt.image} alt={opt.model} className="w-full h-full object-cover" />
-                                                            {opt.winner && <div className="absolute top-2 right-2 bg-[#9CAF88] text-white p-1 rounded-full"><Trophy className="w-3 h-3" /></div>}
+                                        {item.options && item.options.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {(item.options || []).slice(0, 3).map((opt, idx) => (
+                                                    <div key={idx} className={`p-3 rounded-xl border text-xs overflow-hidden ${opt.winner ? 'bg-[#9CAF88]/5 border-[#9CAF88]/20' : 'bg-[#F9F9F9] border-transparent'}`}>
+                                                        {opt.image && (
+                                                            <div className="w-full h-24 mb-3 rounded-lg overflow-hidden relative">
+                                                                <img src={opt.image} alt={opt.model} className="w-full h-full object-cover" />
+                                                                {opt.winner && <div className="absolute top-2 right-2 bg-[#9CAF88] text-white p-1 rounded-full"><Trophy className="w-3 h-3" /></div>}
+                                                            </div>
+                                                        )}
+                                                        <div className="flex justify-between font-medium mb-1">
+                                                            <span>{opt.model || 'Untitled'}</span>
+                                                            <span>{opt.price ? `$${opt.price}` : '—'}</span>
                                                         </div>
-                                                    )}
-                                                    <div className="flex justify-between font-medium mb-1">
-                                                        <span>{opt.model || 'Untitled'}</span>
-                                                        <span>{opt.price ? `$${opt.price}` : '—'}</span>
+                                                        <div className="text-[#717171] truncate">{opt.store || ''}</div>
                                                     </div>
-                                                    <div className="text-[#717171] truncate">{opt.store || ''}</div>
-                                                </div>
-                                            ))}
-                                            {item.options.length > 3 && <div className="text-[10px] text-center text-[#717171]">+ {item.options.length - 3} more options</div>}
-                                        </div>
-                                    ) : (
-                                        <div className="py-8 flex flex-col items-center justify-center text-[#BCBCBC] border-2 border-dashed border-[#F5F5F5] rounded-xl">
-                                            <Plus className="w-6 h-6 mb-2 opacity-50" />
-                                            <span className="text-[11px] uppercase tracking-widest">Compare Options</span>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
+                                                ))}
+                                                {item.options.length > 3 && <div className="text-[10px] text-center text-[#717171]">+ {item.options.length - 3} more options</div>}
+                                            </div>
+                                        ) : (
+                                            <div className="py-8 flex flex-col items-center justify-center text-[#BCBCBC] border-2 border-dashed border-[#F5F5F5] rounded-xl">
+                                                <Plus className="w-6 h-6 mb-2 opacity-50" />
+                                                <span className="text-[11px] uppercase tracking-widest">Compare Options</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                         </div>
                     </div>
                 </div>
@@ -577,14 +585,7 @@ export default function App() {
                                     <p className="text-[11px] text-[#717171] uppercase tracking-widest mt-1">Comparison Engine</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedItem.name + ' ' + (selectedItem.options?.[0]?.model || ''))}`, '_blank')}
-                                    className="p-2 text-[#717171] hover:text-[#2D2D2D] rounded-full hover:bg-[#F5F5F5] transition-colors"
-                                    title="Research on Google"
-                                >
-                                    <Search className="w-5 h-5" />
-                                </button>
+                            <div className="flex items-center gap-3">
                                 {!isReadOnly && (
                                     <button
                                         onClick={() => deleteItem(selectedItem.id)}
