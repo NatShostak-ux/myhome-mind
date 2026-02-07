@@ -7,7 +7,6 @@ import {
     Check,
     Home,
     ShoppingCart,
-    Share2,
     Image as ImageIcon,
     ExternalLink,
     MoreVertical,
@@ -268,32 +267,7 @@ export default function App() {
         setTimeout(() => setToast(null), 3000);
     };
 
-    const shareApp = async () => {
-        if (!user || !db) return;
 
-        try {
-            const shareId = crypto.randomUUID();
-            const publicDoc = doc(db, 'artifacts', appId, 'public', 'data', 'shares', shareId);
-            await setDoc(publicDoc, { spaces, items, groceries, creator: user.uid });
-
-            const shareUrl = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
-            try {
-                await navigator.clipboard.writeText(shareUrl);
-                showToast('Read-only link copied to clipboard');
-            } catch (err) {
-                const textArea = document.createElement("textarea");
-                textArea.value = shareUrl;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showToast('Read-only link copied to clipboard');
-            }
-        } catch (err) {
-            console.error("Share error:", err);
-            showToast('Error creating share link');
-        }
-    };
 
     const handleOptionImageUpload = (itemId, optionIndex, file) => {
         const reader = new FileReader();
@@ -387,15 +361,7 @@ export default function App() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    {!isReadOnly && (
-                        <button
-                            onClick={shareApp}
-                            className="p-2.5 rounded-full hover:bg-[#F5F5F5] transition-colors"
-                            title="Share workspace"
-                        >
-                            <Share2 className="w-5 h-5" />
-                        </button>
-                    )}
+
                 </div>
             </header>
 
@@ -611,7 +577,14 @@ export default function App() {
                                     <p className="text-[11px] text-[#717171] uppercase tracking-widest mt-1">Comparison Engine</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedItem.name + ' ' + (selectedItem.options?.[0]?.model || ''))}`, '_blank')}
+                                    className="p-2 text-[#717171] hover:text-[#2D2D2D] rounded-full hover:bg-[#F5F5F5] transition-colors"
+                                    title="Research on Google"
+                                >
+                                    <Search className="w-5 h-5" />
+                                </button>
                                 {!isReadOnly && (
                                     <button
                                         onClick={() => deleteItem(selectedItem.id)}
@@ -706,7 +679,7 @@ export default function App() {
                                                 <div>
                                                     <label className="text-[10px] text-[#717171] uppercase font-bold tracking-tighter">Price</label>
                                                     <div className="flex items-center border-b border-[#ECECEC]">
-                                                        <span className="text-xs text-[#717171] mr-1">$</span>
+                                                        <span className="text-xs text-[#717171] mr-1">€</span>
                                                         <input
                                                             readOnly={isReadOnly}
                                                             type="number"
