@@ -104,6 +104,7 @@ export default function App() {
     const [selectedItem, setSelectedItem] = useState(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [authError, setAuthError] = useState(null);
     const [toast, setToast] = useState(null);
 
     // --- Auth Setup ---
@@ -117,12 +118,19 @@ export default function App() {
                 }
             } catch (err) {
                 console.error("Auth error:", err);
+                setAuthError(err.message);
+                setLoading(false);
             }
         };
         initAuth();
 
         const unsubscribe = onAuthStateChanged(auth, (u) => {
             setUser(u);
+            if (!u && !loading) {
+                // If we have no user and aren't loading, maybe we should attempt sign-in again or show error?
+                // But for now, let's just ensure we don't get stuck if u is null on initial load.
+                // Actually, initAuth handles the active sign-in.
+            }
         });
         return () => unsubscribe();
     }, []);
@@ -156,6 +164,12 @@ export default function App() {
             setLoading(false);
         }, (err) => {
             console.error("Firestore read error:", err);
+            // If it's a permission error, it might be due to security rules or auth
+            if (err.code === 'permission-denied') {
+                setAuthError("Database permission denied. Checking security rules...");
+            } else {
+                setAuthError(err.message);
+            }
             setLoading(false);
         });
 
@@ -300,6 +314,26 @@ export default function App() {
                         VITE_FIREBASE_PROJECT_ID=...
                     </code>
                 </div>
+            </div>
+        );
+    }
+
+    if (authError) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#FBFBF9] p-8 text-center" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h1 className="text-xl font-medium tracking-tight mb-2 text-red-600">Connection Error</h1>
+                <p className="text-[#717171] max-w-md mb-6">{authError}</p>
+                <div className="bg-white p-4 rounded-xl border border-[#ECECEC] text-sm text-left max-w-md">
+                    <p className="font-medium mb-2">Troubleshooting:</p>
+                    <ul className="list-disc pl-5 space-y-1 text-[#717171]">
+                        <li>Enable <strong>Anonymous Authentication</strong> in Firebase Console &gt; Authentication &gt; Sign-in method.</li>
+                        <li>Create a <strong>Firestore Database</strong> in test mode (or production mode) in Firebase Console.</li>
+                        <li>Check your internet connection.</li>
+                    </ul>
+                </div>
+                <button onClick={() => window.location.reload()} className="mt-8 px-6 py-2 bg-[#2D2D2D] text-white rounded-full text-sm">
+                    Retry
+                </button>
             </div>
         );
     }
