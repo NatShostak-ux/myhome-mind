@@ -462,17 +462,17 @@ export default function App() {
     );
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-[#FBFBF9] text-[#2D2D2D] selection:bg-[#E5DED4] overflow-hidden relative" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="min-h-screen bg-[#FBFBF9] text-[#2D2D2D] selection:bg-[#E5DED4] relative" style={{ fontFamily: 'Outfit, sans-serif' }}>
 
-            {/* Toast Notification - Absolute to App Shell */}
+            {/* Toast Notification */}
             {toast && (
-                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-[#2D2D2D] text-white px-6 py-3 rounded-full text-sm shadow-xl z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300 pointer-events-none">
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#2D2D2D] text-white px-6 py-3 rounded-full text-sm shadow-xl z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
                     {toast}
                 </div>
             )}
 
             {/* Header */}
-            <header className="shrink-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#ECECEC] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-[#ECECEC] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-medium tracking-tight">MyHome Mind</h1>
                     {isReadOnly && <span className="text-[10px] bg-[#E5DED4] px-2 py-0.5 rounded-full uppercase tracking-tighter">Shared View</span>}
@@ -525,7 +525,7 @@ export default function App() {
 
 
             {/* Main Content Area - Scrollable */}
-            <main className="flex-1 overflow-y-auto p-6 md:p-10 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
+            <main className="p-6 md:p-10 pb-32 md:pb-10 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
                 {activeTab === 'groceries' ? (
                     <div className="max-w-xl mx-auto space-y-6">
                         <div className="flex items-center justify-between">
@@ -766,7 +766,7 @@ export default function App() {
             </main>
 
             {/* Main Navigation - Fixed at bottom of flex column */}
-            <nav className="shrink-0 w-full md:w-auto bg-white md:bg-transparent border-t md:border-none border-[#ECECEC] flex md:justify-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-2 z-40 relative">
+            <nav className="fixed bottom-0 left-0 w-full md:relative md:w-auto bg-white md:bg-transparent border-t md:border-none border-[#ECECEC] flex md:justify-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-2 z-50 transition-all duration-300">
                 <div className="flex w-full md:w-auto md:bg-white md:p-1.5 md:rounded-full md:shadow-sm md:border md:border-[#ECECEC] gap-2">
                     <button
                         onClick={() => setActiveTab('groceries')}
