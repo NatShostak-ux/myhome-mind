@@ -284,9 +284,20 @@ export default function App() {
     };
 
     // --- Filtering ---
+    const matchItem = (item, query) => {
+        const q = query.toLowerCase();
+        const atomicName = (item.name || '').toLowerCase();
+        const matchesName = atomicName.includes(q);
+        const matchesOptions = (item.options || []).some(opt =>
+            (opt.model || '').toLowerCase().includes(q) ||
+            (opt.store || '').toLowerCase().includes(q)
+        );
+        return matchesName || matchesOptions;
+    };
+
     const filteredSpaces = spaces.filter(s => {
         const matchesName = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-        const hasMatchingItems = items.some(i => i.spaceId === s.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
+        const hasMatchingItems = items.some(i => i.spaceId === s.id && matchItem(i, searchQuery));
         return matchesName || hasMatchingItems;
     });
     const filteredGroceries = groceries.filter(g => (g.text || '').toLowerCase().includes(searchQuery.toLowerCase()));
@@ -480,7 +491,7 @@ export default function App() {
                                             <p className="text-[10px] uppercase tracking-widest text-[#717171] mb-2">Matches found:</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {items
-                                                    .filter(i => i.spaceId === space.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                                                    .filter(i => i.spaceId === space.id && matchItem(i, searchQuery))
                                                     .slice(0, 3)
                                                     .map(match => (
                                                         <span key={match.id} className="text-xs bg-[#F5F5F5] px-2 py-1 rounded-md text-[#2D2D2D]">
@@ -488,9 +499,9 @@ export default function App() {
                                                         </span>
                                                     ))
                                                 }
-                                                {items.filter(i => i.spaceId === space.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase())).length > 3 && (
+                                                {items.filter(i => i.spaceId === space.id && matchItem(i, searchQuery)).length > 3 && (
                                                     <span className="text-xs text-[#717171] self-center">
-                                                        +{items.filter(i => i.spaceId === space.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase())).length - 3}
+                                                        +{items.filter(i => i.spaceId === space.id && matchItem(i, searchQuery)).length - 3}
                                                     </span>
                                                 )}
                                             </div>
@@ -529,7 +540,7 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {items
                                 .filter(i => i.spaceId === selectedSpace.id)
-                                .filter(i => (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                                .filter(i => matchItem(i, searchQuery))
                                 .map(item => (
                                     <div
                                         key={item.id}
