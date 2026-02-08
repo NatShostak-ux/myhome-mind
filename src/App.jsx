@@ -284,7 +284,6 @@ export default function App() {
     };
 
     // --- Filtering ---
-    // --- Filtering ---
     const filteredSpaces = spaces.filter(s => {
         const matchesName = (s.name || '').toLowerCase().includes(searchQuery.toLowerCase());
         const hasMatchingItems = items.some(i => i.spaceId === s.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()));
@@ -476,6 +475,27 @@ export default function App() {
                                             {items.filter(i => i.spaceId === space.id).length} ITEMS
                                         </div>
                                     </div>
+                                    {searchQuery && (
+                                        <div className="mt-4 pt-4 border-t border-[#F5F5F5]">
+                                            <p className="text-[10px] uppercase tracking-widest text-[#717171] mb-2">Matches found:</p>
+                                            <div className="flex flex-wrap gap-2">
+                                                {items
+                                                    .filter(i => i.spaceId === space.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                                                    .slice(0, 3)
+                                                    .map(match => (
+                                                        <span key={match.id} className="text-xs bg-[#F5F5F5] px-2 py-1 rounded-md text-[#2D2D2D]">
+                                                            {match.name}
+                                                        </span>
+                                                    ))
+                                                }
+                                                {items.filter(i => i.spaceId === space.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase())).length > 3 && (
+                                                    <span className="text-xs text-[#717171] self-center">
+                                                        +{items.filter(i => i.spaceId === space.id && (i.name || '').toLowerCase().includes(searchQuery.toLowerCase())).length - 3}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
