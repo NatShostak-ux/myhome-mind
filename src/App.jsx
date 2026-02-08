@@ -142,7 +142,13 @@ export default function App() {
             await signInWithPopup(auth, provider);
         } catch (error) {
             console.error("Google Sign-In Error:", error);
-            showToast(`Login failed: ${error.message}`);
+            if (error.code === 'auth/unauthorized-domain') {
+                showToast(`Domain not authorized. Add to Firebase Auth settings.`);
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                // User closed popup, no error needed
+            } else {
+                showToast(`Login failed: ${error.message}`);
+            }
         }
     };
 
