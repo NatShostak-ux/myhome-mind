@@ -188,10 +188,16 @@ export default function App() {
         const unsubscribe = onSnapshot(docPath, (snapshot) => {
             if (snapshot.exists()) {
                 const data = snapshot.data();
-                if (data.spaces) setSpaces(data.spaces);
-                if (data.items) setItems(data.items);
-                if (data.groceries) setGroceries(data.groceries);
-                if (data.repairs) setRepairs(data.repairs);
+                setSpaces(data.spaces || DEFAULT_SPACES);
+                setItems(data.items || []);
+                setGroceries(data.groceries || []);
+                setRepairs(data.repairs || []);
+            } else {
+                // New user or empty data -> Reset to defaults
+                setSpaces(DEFAULT_SPACES);
+                setItems([]);
+                setGroceries([]);
+                setRepairs([]);
             }
             setLoading(false);
         }, (err) => {
@@ -205,7 +211,16 @@ export default function App() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => {
+            unsubscribe();
+            // Optional: We could reset state here too, but the next effect run will handle it or the loading state will cover it.
+            // For cleaner UX, let's reset to defaults on unmount/user change so old data doesn't flash.
+            setSpaces(DEFAULT_SPACES);
+            setItems([]);
+            setGroceries([]);
+            setRepairs([]);
+            setLoading(true);
+        };
     }, [user]);
 
     const saveData = async (newSpaces, newItems, newGroceries, newRepairs) => {
