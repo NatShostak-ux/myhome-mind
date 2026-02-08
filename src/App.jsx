@@ -477,7 +477,83 @@ export default function App() {
                             )}
                         </div>
                     </div>
+                ) : searchQuery ? (
+                    // --- Global Search Results View ---
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-xl font-light mb-6">Search Results</h2>
+                            {items.filter(i => matchItem(i, searchQuery)).length === 0 ? (
+                                <div className="text-center py-20 text-[#717171]">
+                                    <p className="text-lg font-light mb-2">No items found</p>
+                                    <p className="text-sm">Try searching for a different item name, brand, or store.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {items
+                                        .filter(i => matchItem(i, searchQuery))
+                                        .map(item => {
+                                            const parentSpace = spaces.find(s => s.id === item.spaceId);
+                                            const matches = getSearchMatches(item, searchQuery);
+                                            return (
+                                                <div
+                                                    key={item.id}
+                                                    onClick={() => setSelectedItem(item)}
+                                                    className="bg-white p-5 rounded-2xl border border-[#ECECEC] hover:shadow-md transition-all cursor-pointer relative flex flex-col h-fit group"
+                                                >
+                                                    {/* Space Badge */}
+                                                    <div className="absolute top-4 right-4 z-10">
+                                                        <span className="text-[10px] uppercase font-bold tracking-wider bg-[#F5F5F5] text-[#717171] px-2 py-1 rounded-md">
+                                                            {parentSpace?.name || 'Unknown Space'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-start mb-4 pr-16">
+                                                        <h4 className="font-medium text-lg">{item.name}</h4>
+                                                    </div>
+
+                                                    {/* Matched Highlights */}
+                                                    <div className="mb-4 flex flex-wrap gap-1">
+                                                        {matches.slice(0, 3).map(m => (
+                                                            <span key={m.id} className="text-[10px] bg-[#E5DED4]/30 text-[#2D2D2D] px-1.5 py-0.5 rounded border border-[#E5DED4]">
+                                                                {m.text}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+
+                                                    {item.options && item.options.length > 0 ? (
+                                                        <div className="space-y-3">
+                                                            {(item.options || []).slice(0, 3).map((opt, idx) => (
+                                                                <div key={idx} className={`p-3 rounded-xl border text-xs overflow-hidden ${opt.winner ? 'bg-[#9CAF88]/5 border-[#9CAF88]/20' : 'bg-[#F9F9F9] border-transparent'}`}>
+                                                                    {opt.image && (
+                                                                        <div className="w-full h-24 mb-3 rounded-lg overflow-hidden relative">
+                                                                            <img src={opt.image} alt={opt.model} className="w-full h-full object-cover" />
+                                                                            {opt.winner && <div className="absolute top-2 right-2 bg-[#9CAF88] text-white p-1 rounded-full"><Trophy className="w-3 h-3" /></div>}
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex justify-between font-medium mb-1">
+                                                                        <span>{opt.model || 'Untitled'}</span>
+                                                                        <span>{opt.price ? `€${opt.price}` : '—'}</span>
+                                                                    </div>
+                                                                    <div className="text-[#717171] truncate">{opt.store || ''}</div>
+                                                                </div>
+                                                            ))}
+                                                            {item.options.length > 3 && <div className="text-[10px] text-center text-[#717171]">+ {item.options.length - 3} more options</div>}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="py-8 flex flex-col items-center justify-center text-[#BCBCBC] border-2 border-dashed border-[#F5F5F5] rounded-xl">
+                                                            <Plus className="w-6 h-6 mb-2 opacity-50" />
+                                                            <span className="text-[11px] uppercase tracking-widest">No Options</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 ) : (
+                    // --- Default Space Grid View ---
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {filteredSpaces.map((space) => (
                             <div
