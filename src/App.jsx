@@ -790,7 +790,6 @@ export default function App() {
                 )}
             </main>
 
-            {/* Space Modal Overlay */}
             {/* Space Detail View */}
             {selectedSpace && (
                 <div
