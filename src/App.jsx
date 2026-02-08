@@ -491,7 +491,33 @@ export default function App() {
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-medium tracking-tight">MyHome Mind</h1>
                     {isReadOnly && <span className="text-[10px] bg-[#E5DED4] px-2 py-0.5 rounded-full uppercase tracking-tighter">Shared View</span>}
+                    {isReadOnly && <span className="text-[10px] bg-[#E5DED4] px-2 py-0.5 rounded-full uppercase tracking-tighter">Shared View</span>}
                 </div>
+
+                {/* Desktop Navigation */}
+                <nav className="hidden md:flex items-center gap-1 bg-[#F5F5F5] p-1 rounded-full absolute left-1/2 -translate-x-1/2">
+                    <button
+                        onClick={() => setActiveTab('groceries')}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'groceries' ? 'bg-white shadow-sm text-[#2D2D2D]' : 'text-[#717171] hover:text-[#2D2D2D]'}`}
+                    >
+                        <ShoppingCart className="w-4 h-4" />
+                        Groceries
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('assets')}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'assets' ? 'bg-white shadow-sm text-[#2D2D2D]' : 'text-[#717171] hover:text-[#2D2D2D]'}`}
+                    >
+                        <Home className="w-4 h-4" />
+                        Assets
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('repairs')}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${activeTab === 'repairs' ? 'bg-white shadow-sm text-[#2D2D2D]' : 'text-[#717171] hover:text-[#2D2D2D]'}`}
+                    >
+                        <Hammer className="w-4 h-4" />
+                        Repairs
+                    </button>
+                </nav>
 
                 <div className="flex items-center gap-3 flex-1 max-w-2xl justify-end">
                     <div className="relative flex-1 max-w-md">
@@ -780,26 +806,26 @@ export default function App() {
                 )}
             </main>
 
-            {/* Main Navigation - Fixed at bottom of flex column */}
-            <nav className="fixed bottom-0 left-0 w-full md:relative md:w-auto bg-white md:bg-transparent border-t md:border-none border-[#ECECEC] flex md:justify-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-2 z-50">
-                <div className="flex w-full md:w-auto md:bg-white md:p-1.5 md:rounded-full md:shadow-sm md:border md:border-[#ECECEC] gap-2">
+            {/* Main Navigation - Mobile Only (Fixed Bottom) */}
+            <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-[#ECECEC] flex justify-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] z-50">
+                <div className="flex w-full gap-2">
                     <button
                         onClick={() => setActiveTab('groceries')}
-                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'groceries' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'groceries' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
                     >
                         <ShoppingCart className="w-4 h-4" />
                         <span className="text-sm font-medium hidden md:inline">Daily Groceries</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('assets')}
-                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'assets' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'assets' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
                     >
                         <Home className="w-4 h-4" />
                         <span className="text-sm font-medium hidden md:inline">Home Assets</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('repairs')}
-                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'repairs' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
+                        className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'repairs' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
                     >
                         <Hammer className="w-4 h-4" />
                         <span className="text-sm font-medium hidden md:inline">Repairs</span>
