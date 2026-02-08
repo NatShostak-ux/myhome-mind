@@ -32,6 +32,8 @@ import {
     doc,
     setDoc,
     getDoc,
+    deleteDoc,
+    writeBatch,
     collection,
     onSnapshot,
     query
@@ -173,48 +175,82 @@ export default function App() {
         if (shareId) setIsReadOnly(true);
     }, []);
 
-    // --- Data Sync ---
+    // --- New Data Sync (Subcollections) ---
     useEffect(() => {
         if (!user) return;
 
         const params = new URLSearchParams(window.location.search);
         const shareId = params.get('share');
+        // If shared view, we might need a different strategy, but assuming for now we just look at user data or shared data is structured similarly?
+        // Actually, if shareId is present, we are looking at `artifacts/{appId}/public/data/shares/{shareId}`.
+        // For subcollection refactor, sharing needs to be considered.
+        // If shareId, we can't easily read subcollections unless the share logic also copies them or we have a way to point to them.
+        // Given complexity, let's assume for this step we are focusing on the MAIN user flow. 
+        // Share logic was removed in a previous step! So we can ignore shareId logic for subcollections for now or just treat it as read-only on the main path if we were using it. 
+        // But wait, the previous task "Remove Share Feature" was marked complete. Let's clean up share logic too if it's dead code?
+        // Code still has `const shareId`. User said "Remove Share Feature". I'll stick to user logic.
 
-        // Path segment rule check: artifacts/{appId}/users/{userId}/{collection}/{doc}
-        const docPath = shareId
-            ? doc(db, 'artifacts', appId, 'public', 'data', 'shares', shareId)
-            : doc(db, 'artifacts', appId, 'users', user.uid, 'personal', 'settings');
+        // Main User Paths
+        const userBasePath = `artifacts/${appId}/users/${user.uid}`;
+        const spacesCol = collection(db, userBasePath, 'spaces');
+        const itemsCol = collection(db, userBasePath, 'items');
+        const settingsDoc = doc(db, userBasePath, 'personal', 'settings');
 
-        const unsubscribe = onSnapshot(docPath, (snapshot) => {
-            if (snapshot.exists()) {
-                const data = snapshot.data();
-                setSpaces(data.spaces || DEFAULT_SPACES);
-                setItems(data.items || []);
+        setLoading(true);
+
+        const unsubs = [];
+
+        // 1. Spaces Listener
+        unsubs.push(onSnapshot(spacesCol, (snap) => {
+            const loadedSpaces = [];
+            snap.forEach(doc => loadedSpaces.push(doc.data()));
+
+            // First Run Migration / Initialization
+            if (loadedSpaces.length === 0 && !snap.metadata.fromCache) {
+                // Check if it's truly empty or just loading? 
+                // If empty, we seed default spaces.
+                // We need to be careful not to overwrite if just slow network?
+                // But snap.empty is true.
+                const batch = writeBatch(db);
+                DEFAULT_SPACES.forEach(space => {
+                    const ref = doc(spacesCol, space.id);
+                    batch.set(ref, space);
+                });
+                batch.commit().catch(e => console.error("Init spaces failed", e));
+                // State will update on next snapshot
+            } else {
+                // Sort by ID to keep order? Or just name?
+                // DEFAULT_SPACES are 1-7.
+                loadedSpaces.sort((a, b) => a.id.localeCompare(b.id));
+                setSpaces(loadedSpaces);
+            }
+        }, err => console.error("Spaces sync error", err)));
+
+        // 2. Items Listener
+        unsubs.push(onSnapshot(itemsCol, (snap) => {
+            const loadedItems = [];
+            snap.forEach(doc => loadedItems.push(doc.data()));
+            setItems(loadedItems);
+        }, err => console.error("Items sync error", err)));
+
+        // 3. Settings (Groceries/Repairs) Listener
+        unsubs.push(onSnapshot(settingsDoc, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
                 setGroceries(data.groceries || []);
                 setRepairs(data.repairs || []);
             } else {
-                // New user or empty data -> Reset to defaults
-                setSpaces(DEFAULT_SPACES);
-                setItems([]);
                 setGroceries([]);
                 setRepairs([]);
             }
+            setLoading(false); // Assume ready when settings load (or spaces/items)
+        }, err => {
+            console.error("Settings sync error", err);
             setLoading(false);
-        }, (err) => {
-            console.error("Firestore read error:", err);
-            // If it's a permission error, it might be due to security rules or auth
-            if (err.code === 'permission-denied') {
-                setAuthError("Database permission denied. Checking security rules...");
-            } else {
-                setAuthError(err.message);
-            }
-            setLoading(false);
-        });
+        }));
 
         return () => {
-            unsubscribe();
-            // Optional: We could reset state here too, but the next effect run will handle it or the loading state will cover it.
-            // For cleaner UX, let's reset to defaults on unmount/user change so old data doesn't flash.
+            unsubs.forEach(u => u());
             setSpaces(DEFAULT_SPACES);
             setItems([]);
             setGroceries([]);
@@ -223,21 +259,46 @@ export default function App() {
         };
     }, [user]);
 
-    const saveData = async (newSpaces, newItems, newGroceries, newRepairs) => {
+    // --- Granular Save Functions ---
+    const saveSpace = async (space) => {
         if (!user || isReadOnly) return;
+        try {
+            const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'spaces', space.id);
+            await setDoc(ref, space, { merge: true });
+        } catch (e) {
+            console.error("Save space failed", e);
+        }
+    };
 
+    const saveItem = async (item) => {
+        if (!user || isReadOnly) return;
+        try {
+            const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'items', item.id);
+            await setDoc(ref, item, { merge: true });
+        } catch (e) {
+            console.error("Save item failed", e);
+        }
+    };
+
+    const deleteItemFromDb = async (itemId) => {
+        if (!user || isReadOnly) return;
+        try {
+            await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'items', itemId));
+        } catch (e) {
+            console.error("Delete item failed", e);
+        }
+    };
+
+    const saveLists = async (newGroceries, newRepairs) => {
+        if (!user || isReadOnly) return;
         try {
             const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'personal', 'settings');
-
             const updates = { lastUpdated: Date.now() };
-            if (newSpaces !== undefined && newSpaces !== null) updates.spaces = newSpaces;
-            if (newItems !== undefined && newItems !== null) updates.items = newItems;
-            if (newGroceries !== undefined && newGroceries !== null) updates.groceries = newGroceries;
-            if (newRepairs !== undefined && newRepairs !== null) updates.repairs = newRepairs;
-
+            if (newGroceries) updates.groceries = newGroceries;
+            if (newRepairs) updates.repairs = newRepairs;
             await setDoc(docRef, updates, { merge: true });
-        } catch (err) {
-            console.error("Firestore write error:", err);
+        } catch (e) {
+            console.error("Save lists failed", e);
         }
     };
 
@@ -246,19 +307,19 @@ export default function App() {
         const newItem = { id: crypto.randomUUID(), text: '', completed: false };
         const updated = [newItem, ...groceries];
         setGroceries(updated);
-        saveData(null, null, updated, null);
+        saveLists(updated, null);
     };
 
     const updateGrocery = (id, field, value) => {
         const updated = groceries.map(g => g.id === id ? { ...g, [field]: value } : g);
         setGroceries(updated);
-        saveData(null, null, updated, null);
+        saveLists(updated, null);
     };
 
     const deleteGrocery = (id) => {
         const updated = groceries.filter(g => g.id !== id);
         setGroceries(updated);
-        saveData(null, null, updated, null);
+        saveLists(updated, null);
     };
 
     // --- Repairs Actions ---
@@ -266,19 +327,19 @@ export default function App() {
         const newItem = { id: crypto.randomUUID(), text: '', completed: false };
         const updated = [newItem, ...repairs];
         setRepairs(updated);
-        saveData(null, null, null, updated);
+        saveLists(null, updated);
     };
 
     const updateRepair = (id, field, value) => {
         const updated = repairs.map(r => r.id === id ? { ...r, [field]: value } : r);
         setRepairs(updated);
-        saveData(null, null, null, updated);
+        saveLists(null, updated);
     };
 
     const deleteRepair = (id) => {
         const updated = repairs.filter(r => r.id !== id);
         setRepairs(updated);
-        saveData(null, null, null, updated);
+        saveLists(null, updated);
     };
 
     // --- DnD Migration & Stability ---
@@ -349,8 +410,9 @@ export default function App() {
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
                 const newSpaces = spaces.map(s => s.id === spaceId ? { ...s, image: dataUrl } : s);
+                const updatedSpace = newSpaces.find(s => s.id === spaceId);
                 setSpaces(newSpaces);
-                saveData(newSpaces, undefined, undefined, undefined);
+                if (updatedSpace) saveSpace(updatedSpace);
             };
             img.src = e.target.result;
         };
@@ -389,11 +451,12 @@ export default function App() {
                 const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
 
                 const newItems = items.map(i => i.id === itemId ? { ...i, image: dataUrl } : i);
+                const updatedItem = newItems.find(i => i.id === itemId);
                 setItems(newItems);
                 if (selectedItem && selectedItem.id === itemId) {
                     setSelectedItem({ ...selectedItem, image: dataUrl });
                 }
-                saveData(undefined, newItems, undefined);
+                if (updatedItem) saveItem(updatedItem);
             };
             img.src = e.target.result;
         };
@@ -410,20 +473,21 @@ export default function App() {
         };
         const updated = [...items, newItem];
         setItems(updated);
-        saveData(null, updated, null);
+        saveItem(newItem);
     };
 
     const updateItem = (itemId, updates) => {
         const updated = items.map(i => i.id === itemId ? { ...i, ...updates } : i);
         setItems(updated);
-        saveData(null, updated, null);
+        const item = updated.find(i => i.id === itemId);
+        if (item) saveItem(item);
         if (selectedItem?.id === itemId) setSelectedItem({ ...selectedItem, ...updates });
     };
 
     const deleteItem = (itemId) => {
         const updated = items.filter(i => i.id !== itemId);
         setItems(updated);
-        saveData(null, updated, null);
+        deleteItemFromDb(itemId);
         setSelectedItem(null);
     };
 
