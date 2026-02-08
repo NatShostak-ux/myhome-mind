@@ -316,26 +316,88 @@ export default function App() {
     };
 
     const handleSpaceImageUpload = (spaceId, file) => {
+        if (!file) return;
+
         const reader = new FileReader();
-        reader.onloadend = () => {
-            const newSpaces = spaces.map(s => s.id === spaceId ? { ...s, image: reader.result } : s);
-            setSpaces(newSpaces);
-            saveData(newSpaces, undefined, undefined, undefined);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Resize logic: max dimension 800px
+                const MAX_DIMENSION = 800;
+                if (width > height) {
+                    if (width > MAX_DIMENSION) {
+                        height *= MAX_DIMENSION / width;
+                        width = MAX_DIMENSION;
+                    }
+                } else {
+                    if (height > MAX_DIMENSION) {
+                        width *= MAX_DIMENSION / height;
+                        height = MAX_DIMENSION;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Compress to JPEG with 0.7 quality
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                const newSpaces = spaces.map(s => s.id === spaceId ? { ...s, image: dataUrl } : s);
+                setSpaces(newSpaces);
+                saveData(newSpaces, undefined, undefined, undefined);
+            };
+            img.src = e.target.result;
         };
-        if (file) reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
     };
 
     const handleItemImageUpload = (itemId, file) => {
+        if (!file) return;
+
         const reader = new FileReader();
-        reader.onloadend = () => {
-            const newItems = items.map(i => i.id === itemId ? { ...i, image: reader.result } : i);
-            setItems(newItems);
-            if (selectedItem && selectedItem.id === itemId) {
-                setSelectedItem({ ...selectedItem, image: reader.result });
-            }
-            saveData(undefined, newItems, undefined);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                const MAX_DIMENSION = 800;
+                if (width > height) {
+                    if (width > MAX_DIMENSION) {
+                        height *= MAX_DIMENSION / width;
+                        width = MAX_DIMENSION;
+                    }
+                } else {
+                    if (height > MAX_DIMENSION) {
+                        width *= MAX_DIMENSION / height;
+                        height = MAX_DIMENSION;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                const newItems = items.map(i => i.id === itemId ? { ...i, image: dataUrl } : i);
+                setItems(newItems);
+                if (selectedItem && selectedItem.id === itemId) {
+                    setSelectedItem({ ...selectedItem, image: dataUrl });
+                }
+                saveData(undefined, newItems, undefined);
+            };
+            img.src = e.target.result;
         };
-        if (file) reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
     };
 
     const addItemToSpace = (spaceId) => {
@@ -373,17 +435,47 @@ export default function App() {
 
 
     const handleOptionImageUpload = (itemId, optionIndex, file) => {
+        if (!file) return;
+
         const reader = new FileReader();
-        reader.onloadend = () => {
-            const item = items.find(i => i.id === itemId);
-            if (!item) return;
-            const newOptions = [...(item.options || [])];
-            if (newOptions[optionIndex]) {
-                newOptions[optionIndex] = { ...newOptions[optionIndex], image: reader.result };
-                updateItem(itemId, { options: newOptions });
-            }
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                const MAX_DIMENSION = 800;
+                if (width > height) {
+                    if (width > MAX_DIMENSION) {
+                        height *= MAX_DIMENSION / width;
+                        width = MAX_DIMENSION;
+                    }
+                } else {
+                    if (height > MAX_DIMENSION) {
+                        width *= MAX_DIMENSION / height;
+                        height = MAX_DIMENSION;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+                const item = items.find(i => i.id === itemId);
+                if (!item) return;
+                const newOptions = [...(item.options || [])];
+                if (newOptions[optionIndex]) {
+                    newOptions[optionIndex] = { ...newOptions[optionIndex], image: dataUrl };
+                    updateItem(itemId, { options: newOptions });
+                }
+            };
+            img.src = e.target.result;
         };
-        if (file) reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
     };
 
     // --- Filtering ---
