@@ -523,28 +523,28 @@ export default function App() {
             </header>
 
             {/* Main Navigation */}
-            <nav className="fixed bottom-0 left-0 w-full md:relative md:w-auto bg-white md:bg-transparent border-t md:border-none border-[#ECECEC] flex md:justify-center p-2 z-40">
+            <nav className="fixed bottom-0 left-0 w-full md:relative md:w-auto bg-white md:bg-transparent border-t md:border-none border-[#ECECEC] flex md:justify-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-2 z-50">
                 <div className="flex w-full md:w-auto md:bg-white md:p-1.5 md:rounded-full md:shadow-sm md:border md:border-[#ECECEC] gap-2">
                     <button
                         onClick={() => setActiveTab('groceries')}
                         className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'groceries' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
                     >
                         <ShoppingCart className="w-4 h-4" />
-                        <span className="text-sm font-medium">Daily Groceries</span>
+                        <span className="text-sm font-medium hidden md:inline">Daily Groceries</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('assets')}
                         className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'assets' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
                     >
                         <Home className="w-4 h-4" />
-                        <span className="text-sm font-medium">Home Assets</span>
+                        <span className="text-sm font-medium hidden md:inline">Home Assets</span>
                     </button>
                     <button
                         onClick={() => setActiveTab('repairs')}
                         className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'repairs' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
                     >
                         <Hammer className="w-4 h-4" />
-                        <span className="text-sm font-medium">Repairs</span>
+                        <span className="text-sm font-medium hidden md:inline">Repairs</span>
                     </button>
                 </div>
             </nav>
