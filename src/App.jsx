@@ -13,7 +13,9 @@ import {
     X,
     GripVertical,
     Maximize2,
-    Trophy
+    Trophy,
+    Hammer,
+    Move
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import {
@@ -102,6 +104,7 @@ export default function App() {
     const [spaces, setSpaces] = useState(DEFAULT_SPACES);
     const [items, setItems] = useState([]);
     const [groceries, setGroceries] = useState([]);
+    const [repairs, setRepairs] = useState([]);
     const [selectedSpace, setSelectedSpace] = useState(null);
     const [selectedItem, setSelectedItem] = useState(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
@@ -188,6 +191,7 @@ export default function App() {
                 if (data.spaces) setSpaces(data.spaces);
                 if (data.items) setItems(data.items);
                 if (data.groceries) setGroceries(data.groceries);
+                if (data.repairs) setRepairs(data.repairs);
             }
             setLoading(false);
         }, (err) => {
@@ -204,7 +208,7 @@ export default function App() {
         return () => unsubscribe();
     }, [user]);
 
-    const saveData = async (newSpaces, newItems, newGroceries) => {
+    const saveData = async (newSpaces, newItems, newGroceries, newRepairs) => {
         if (!user || isReadOnly) return;
 
         try {
@@ -214,6 +218,7 @@ export default function App() {
             if (newSpaces !== undefined && newSpaces !== null) updates.spaces = newSpaces;
             if (newItems !== undefined && newItems !== null) updates.items = newItems;
             if (newGroceries !== undefined && newGroceries !== null) updates.groceries = newGroceries;
+            if (newRepairs !== undefined && newRepairs !== null) updates.repairs = newRepairs;
 
             await setDoc(docRef, updates, { merge: true });
         } catch (err) {
@@ -226,19 +231,65 @@ export default function App() {
         const newItem = { id: crypto.randomUUID(), text: '', completed: false };
         const updated = [newItem, ...groceries];
         setGroceries(updated);
-        saveData(null, null, updated);
+        saveData(null, null, updated, null);
     };
 
     const updateGrocery = (id, field, value) => {
         const updated = groceries.map(g => g.id === id ? { ...g, [field]: value } : g);
         setGroceries(updated);
-        saveData(null, null, updated);
+        saveData(null, null, updated, null);
     };
 
     const deleteGrocery = (id) => {
         const updated = groceries.filter(g => g.id !== id);
         setGroceries(updated);
-        saveData(null, null, updated);
+        saveData(null, null, updated, null);
+    };
+
+    // --- Repairs Actions ---
+    const addRepair = () => {
+        const newItem = { id: crypto.randomUUID(), text: '', completed: false };
+        const updated = [newItem, ...repairs];
+        setRepairs(updated);
+        saveData(null, null, null, updated);
+    };
+
+    const updateRepair = (id, field, value) => {
+        const updated = repairs.map(r => r.id === id ? { ...r, [field]: value } : r);
+        setRepairs(updated);
+        saveData(null, null, null, updated);
+    };
+
+    const deleteRepair = (id) => {
+        const updated = repairs.filter(r => r.id !== id);
+        setRepairs(updated);
+        saveData(null, null, null, updated);
+    };
+
+    // --- Option Reordering ---
+    const [draggedOptionIdx, setDraggedOptionIdx] = useState(null);
+
+    const handleOptionDragStart = (e, index) => {
+        setDraggedOptionIdx(index);
+        e.dataTransfer.effectAllowed = "move";
+        // e.dataTransfer.setDragImage(e.target, 20, 20); // Optional: Custom drag image
+    };
+
+    const handleOptionDragOver = (e, index) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+    };
+
+    const handleOptionDrop = (e, dropIndex) => {
+        e.preventDefault();
+        if (draggedOptionIdx === null || draggedOptionIdx === dropIndex) return;
+
+        const newOptions = [...selectedItem.options];
+        const [draggedOption] = newOptions.splice(draggedOptionIdx, 1);
+        newOptions.splice(dropIndex, 0, draggedOption);
+
+        updateItem(selectedItem.id, { options: newOptions });
+        setDraggedOptionIdx(null);
     };
 
     const handleSpaceImageUpload = (spaceId, file) => {
@@ -246,7 +297,7 @@ export default function App() {
         reader.onloadend = () => {
             const newSpaces = spaces.map(s => s.id === spaceId ? { ...s, image: reader.result } : s);
             setSpaces(newSpaces);
-            saveData(newSpaces, undefined, undefined);
+            saveData(newSpaces, undefined, undefined, undefined);
         };
         if (file) reader.readAsDataURL(file);
     };
@@ -480,6 +531,13 @@ export default function App() {
                         <Home className="w-4 h-4" />
                         <span className="text-sm font-medium">Home Assets</span>
                     </button>
+                    <button
+                        onClick={() => setActiveTab('repairs')}
+                        className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-full transition-all ${activeTab === 'repairs' ? 'bg-[#2D2D2D] text-white' : 'text-[#717171] hover:bg-[#F5F5F5]'}`}
+                    >
+                        <Hammer className="w-4 h-4" />
+                        <span className="text-sm font-medium">Repairs</span>
+                    </button>
                 </div>
             </nav>
 
@@ -524,6 +582,56 @@ export default function App() {
                                             {!isReadOnly && (
                                                 <button
                                                     onClick={() => deleteGrocery(item.id)}
+                                                    className="opacity-0 group-hover:opacity-100 p-2 text-[#717171] hover:text-red-500 transition-all"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                ) : activeTab === 'repairs' ? (
+                    <div className="max-w-xl mx-auto space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-2xl font-light">Home Repairs</h2>
+                            {!isReadOnly && (
+                                <button
+                                    onClick={addRepair}
+                                    className="bg-[#2D2D2D] text-white px-4 py-2 rounded-full text-sm flex items-center gap-2 hover:bg-black transition-colors"
+                                >
+                                    <Plus className="w-4 h-4" /> Add Task
+                                </button>
+                            )}
+                        </div>
+                        <div className="bg-white rounded-3xl border border-[#ECECEC] overflow-hidden shadow-sm">
+                            {(repairs || []).length === 0 ? (
+                                <div className="p-12 text-center text-[#717171] font-light">
+                                    No repairs needed.
+                                </div>
+                            ) : (
+                                <ul className="divide-y divide-[#F5F5F5]">
+                                    {(repairs || []).map((item) => (
+                                        <li key={item.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-[#FAFAFA] transition-colors">
+                                            <button
+                                                disabled={isReadOnly}
+                                                onClick={() => updateRepair(item.id, 'completed', !item.completed)}
+                                                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-[#9CAF88] border-[#9CAF88]' : 'border-[#ECECEC]'}`}
+                                            >
+                                                {item.completed && <Check className="w-3 h-3 text-white" />}
+                                            </button>
+                                            <input
+                                                readOnly={isReadOnly}
+                                                className={`flex-1 bg-transparent border-none focus:ring-0 text-sm py-0 ${item.completed ? 'text-[#717171] line-through' : ''}`}
+                                                value={item.text}
+                                                placeholder="Repair task..."
+                                                onChange={(e) => updateRepair(item.id, 'text', e.target.value)}
+                                            />
+                                            {!isReadOnly && (
+                                                <button
+                                                    onClick={() => deleteRepair(item.id)}
                                                     className="opacity-0 group-hover:opacity-100 p-2 text-[#717171] hover:text-red-500 transition-all"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -676,69 +784,77 @@ export default function App() {
 
             {/* Space Modal Overlay */}
             {selectedSpace && (
-                <div className="fixed inset-0 z-50 bg-[#FBFBF9] flex flex-col animate-in slide-in-from-bottom duration-300">
-                    <div className="border-b border-[#ECECEC] p-6 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => setSelectedSpace(null)}
-                                className="p-2 rounded-full hover:bg-[#F5F5F5]"
-                            >
-                                <ChevronRight className="w-5 h-5 rotate-180" />
-                            </button>
-                            <h2 className="text-2xl font-light">{selectedSpace.name}</h2>
+                <div
+                    onClick={() => setSelectedSpace(null)}
+                    className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex flex-col justify-end md:justify-center animate-in fade-in duration-200"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-[#FBFBF9] h-[85vh] md:h-auto md:max-h-[85vh] md:max-w-6xl md:rounded-[2rem] w-full md:mx-auto shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300"
+                    >
+                        <div className="border-b border-[#ECECEC] p-6 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <button
+                                    onClick={() => setSelectedSpace(null)}
+                                    className="p-2 rounded-full hover:bg-[#F5F5F5]"
+                                >
+                                    <ChevronRight className="w-5 h-5 rotate-180" />
+                                </button>
+                                <h2 className="text-2xl font-light">{selectedSpace.name}</h2>
+                            </div>
+                            {!isReadOnly && (
+                                <button
+                                    onClick={() => addItemToSpace(selectedSpace.id)}
+                                    className="bg-[#2D2D2D] text-white px-6 py-2 rounded-full text-sm flex items-center gap-2 shadow-sm"
+                                >
+                                    <Plus className="w-4 h-4" /> Add Item
+                                </button>
+                            )}
                         </div>
-                        {!isReadOnly && (
-                            <button
-                                onClick={() => addItemToSpace(selectedSpace.id)}
-                                className="bg-[#2D2D2D] text-white px-6 py-2 rounded-full text-sm flex items-center gap-2 shadow-sm"
-                            >
-                                <Plus className="w-4 h-4" /> Add Item
-                            </button>
-                        )}
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-6 md:p-10">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {items
-                                .filter(i => i.spaceId === selectedSpace.id)
-                                .filter(i => matchItem(i, searchQuery))
-                                .map(item => (
-                                    <div
-                                        key={item.id}
-                                        onClick={() => setSelectedItem(item)}
-                                        className="bg-white p-5 rounded-2xl border border-[#ECECEC] hover:shadow-md transition-all cursor-pointer relative flex flex-col h-fit"
-                                    >
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h4 className="font-medium">{item.name}</h4>
-                                            {item.options?.some(o => o.winner) && <Trophy className="w-4 h-4 text-[#9CAF88]" />}
-                                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {items
+                                    .filter(i => i.spaceId === selectedSpace.id)
+                                    .filter(i => matchItem(i, searchQuery))
+                                    .map(item => (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => setSelectedItem(item)}
+                                            className="bg-white p-5 rounded-2xl border border-[#ECECEC] hover:shadow-md transition-all cursor-pointer relative flex flex-col h-fit"
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h4 className="font-medium">{item.name}</h4>
+                                                {item.options?.some(o => o.winner) && <Trophy className="w-4 h-4 text-[#9CAF88]" />}
+                                            </div>
 
-                                        {item.options && item.options.length > 0 ? (
-                                            <div className="space-y-3">
-                                                {(item.options || []).slice(0, 3).map((opt, idx) => (
-                                                    <div key={idx} className={`p-3 rounded-xl border text-xs overflow-hidden ${opt.winner ? 'bg-[#9CAF88]/5 border-[#9CAF88]/20' : 'bg-[#F9F9F9] border-transparent'}`}>
-                                                        {opt.image && (
-                                                            <div className="w-full h-24 mb-3 rounded-lg overflow-hidden relative">
-                                                                <img src={opt.image} alt={opt.model} className="w-full h-full object-cover" />
-                                                                {opt.winner && <div className="absolute top-2 right-2 bg-[#9CAF88] text-white p-1 rounded-full"><Trophy className="w-3 h-3" /></div>}
+                                            {item.options && item.options.length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {(item.options || []).slice(0, 3).map((opt, idx) => (
+                                                        <div key={idx} className={`p-3 rounded-xl border text-xs overflow-hidden ${opt.winner ? 'bg-[#9CAF88]/5 border-[#9CAF88]/20' : 'bg-[#F9F9F9] border-transparent'}`}>
+                                                            {opt.image && (
+                                                                <div className="w-full h-24 mb-3 rounded-lg overflow-hidden relative">
+                                                                    <img src={opt.image} alt={opt.model} className="w-full h-full object-cover" />
+                                                                    {opt.winner && <div className="absolute top-2 right-2 bg-[#9CAF88] text-white p-1 rounded-full"><Trophy className="w-3 h-3" /></div>}
+                                                                </div>
+                                                            )}
+                                                            <div className="flex justify-between font-medium mb-1">
+                                                                <span>{opt.model || 'Untitled'}</span>
+                                                                <span>{opt.price ? `€${opt.price}` : '—'}</span>
                                                             </div>
-                                                        )}
-                                                        <div className="flex justify-between font-medium mb-1">
-                                                            <span>{opt.model || 'Untitled'}</span>
-                                                            <span>{opt.price ? `€${opt.price}` : '—'}</span>
+                                                            <div className="text-[#717171] truncate">{opt.store || ''}</div>
                                                         </div>
-                                                        <div className="text-[#717171] truncate">{opt.store || ''}</div>
-                                                    </div>
-                                                ))}
-                                                {item.options.length > 3 && <div className="text-[10px] text-center text-[#717171]">+ {item.options.length - 3} more options</div>}
-                                            </div>
-                                        ) : (
-                                            <div className="py-8 flex flex-col items-center justify-center text-[#BCBCBC] border-2 border-dashed border-[#F5F5F5] rounded-xl">
-                                                <Plus className="w-6 h-6 mb-2 opacity-50" />
-                                                <span className="text-[11px] uppercase tracking-widest">Compare Options</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                    ))}
+                                                    {item.options.length > 3 && <div className="text-[10px] text-center text-[#717171]">+ {item.options.length - 3} more options</div>}
+                                                </div>
+                                            ) : (
+                                                <div className="py-8 flex flex-col items-center justify-center text-[#BCBCBC] border-2 border-dashed border-[#F5F5F5] rounded-xl">
+                                                    <Plus className="w-6 h-6 mb-2 opacity-50" />
+                                                    <span className="text-[11px] uppercase tracking-widest">Compare Options</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -746,8 +862,14 @@ export default function App() {
 
             {/* Item Comparison Modal */}
             {selectedItem && (
-                <div className="fixed inset-0 z-[60] bg-black/10 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+                <div
+                    onClick={() => setSelectedItem(null)}
+                    className="fixed inset-0 z-[60] bg-black/10 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+                    >
                         <div className="p-8 border-b border-[#ECECEC] flex items-center justify-between">
                             <div className="flex-1 flex items-center gap-5">
                                 <div className="relative group w-20 h-20 bg-[#F5F5F5] rounded-xl overflow-hidden shrink-0">
@@ -792,9 +914,21 @@ export default function App() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-8 bg-[#FBFBF9]">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
                                 {(selectedItem.options || []).map((option, idx) => (
-                                    <div key={idx} className={`relative rounded-2xl border transition-all overflow-hidden ${option.winner ? 'bg-white border-[#9CAF88] shadow-sm' : 'bg-[#FAFAFA] border-[#ECECEC]'}`}>
+                                    <div
+                                        key={idx}
+                                        draggable={!isReadOnly}
+                                        onDragStart={(e) => handleOptionDragStart(e, idx)}
+                                        onDragOver={(e) => handleOptionDragOver(e, idx)}
+                                        onDrop={(e) => handleOptionDrop(e, idx)}
+                                        className={`relative rounded-2xl border transition-all overflow-hidden ${option.winner ? 'bg-white border-[#9CAF88] shadow-sm' : 'bg-[#FAFAFA] border-[#ECECEC]'} ${draggedOptionIdx === idx ? 'opacity-50 scale-95' : ''} group/card`}
+                                    >
+                                        {!isReadOnly && (
+                                            <div className="absolute top-2 left-2 z-20 cursor-move text-white/50 hover:text-white p-1 bg-black/10 rounded backdrop-blur-sm opacity-0 group-hover/card:opacity-100 transition-opacity">
+                                                <Move className="w-4 h-4" />
+                                            </div>
+                                        )}
 
                                         {/* Option Image Header - Full Bleed */}
                                         <div className="relative h-48 bg-[#F0F0F0] overflow-hidden group">
@@ -848,6 +982,7 @@ export default function App() {
                                             )}
 
                                             {/* Gradient Overlay for Text Readability if needed, though text is below */}
+
                                             <div className="absolute inset-0 pointer-events-none border-b border-black/5" />
                                         </div>
 
