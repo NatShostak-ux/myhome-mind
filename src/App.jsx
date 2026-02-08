@@ -266,6 +266,14 @@ export default function App() {
         saveData(null, null, null, updated);
     };
 
+    // --- DnD Migration & Stability ---
+    useEffect(() => {
+        if (selectedItem && selectedItem.options && selectedItem.options.some(o => !o.id)) {
+            const patchedOptions = selectedItem.options.map(o => o.id ? o : { ...o, id: crypto.randomUUID() });
+            updateItem(selectedItem.id, { options: patchedOptions });
+        }
+    }, [selectedItem]);
+
     // --- Option Reordering ---
     const [draggedOptionIdx, setDraggedOptionIdx] = useState(null);
 
@@ -783,16 +791,13 @@ export default function App() {
             </main>
 
             {/* Space Modal Overlay */}
+            {/* Space Detail View */}
             {selectedSpace && (
                 <div
-                    onClick={() => setSelectedSpace(null)}
-                    className="fixed inset-0 z-50 bg-black/20 backdrop-blur-sm flex flex-col justify-end md:justify-center animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 bg-[#FBFBF9] flex flex-col animate-in slide-in-from-bottom duration-300"
                 >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-[#FBFBF9] h-[85vh] md:h-auto md:max-h-[85vh] md:max-w-6xl md:rounded-[2rem] w-full md:mx-auto shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300"
-                    >
-                        <div className="border-b border-[#ECECEC] p-6 flex items-center justify-between">
+                    <div className="flex-1 flex flex-col overflow-hidden">
+                        <div className="border-b border-[#ECECEC] p-6 flex items-center justify-between bg-white/50 backdrop-blur-md">
                             <div className="flex items-center gap-4">
                                 <button
                                     onClick={() => setSelectedSpace(null)}
@@ -917,7 +922,7 @@ export default function App() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
                                 {(selectedItem.options || []).map((option, idx) => (
                                     <div
-                                        key={idx}
+                                        key={option.id || idx}
                                         draggable={!isReadOnly}
                                         onDragStart={(e) => handleOptionDragStart(e, idx)}
                                         onDragOver={(e) => handleOptionDragOver(e, idx)}
@@ -1079,7 +1084,7 @@ export default function App() {
                                 {!isReadOnly && (
                                     <button
                                         onClick={() => {
-                                            const newOption = { model: '', price: '', store: '', link: '', notes: '', winner: false, image: null };
+                                            const newOption = { id: crypto.randomUUID(), model: '', price: '', store: '', link: '', notes: '', winner: false, image: null };
                                             updateItem(selectedItem.id, { options: [...(selectedItem.options || []), newOption] });
                                         }}
                                         className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-[#ECECEC] rounded-2xl hover:border-[#D2B48C] hover:bg-white transition-all text-[#717171] h-full min-h-[400px]"
