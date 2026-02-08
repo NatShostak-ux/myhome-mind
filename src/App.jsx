@@ -564,7 +564,7 @@ export default function App() {
                                                         )}
                                                         <div className="flex justify-between font-medium mb-1">
                                                             <span>{opt.model || 'Untitled'}</span>
-                                                            <span>{opt.price ? `$${opt.price}` : '—'}</span>
+                                                            <span>{opt.price ? `€${opt.price}` : '—'}</span>
                                                         </div>
                                                         <div className="text-[#717171] truncate">{opt.store || ''}</div>
                                                     </div>
