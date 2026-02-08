@@ -20,7 +20,10 @@ import {
     getAuth,
     signInWithCustomToken,
     signInAnonymously,
-    onAuthStateChanged
+    onAuthStateChanged,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut
 } from 'firebase/auth';
 import {
     getFirestore,
@@ -109,30 +112,50 @@ export default function App() {
     // --- Auth Setup ---
     useEffect(() => {
         const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("Auth error:", err);
-                setAuthError(err.message);
-                setLoading(false);
-            }
+            // Wait for auth state to settle before deciding to sign in anonymously
         };
         initAuth();
 
-        const unsubscribe = onAuthStateChanged(auth, (u) => {
-            setUser(u);
-            if (!u && !loading) {
-                // If we have no user and aren't loading, maybe we should attempt sign-in again or show error?
-                // But for now, let's just ensure we don't get stuck if u is null on initial load.
-                // Actually, initAuth handles the active sign-in.
+        const unsubscribe = onAuthStateChanged(auth, async (u) => {
+            if (u) {
+                setUser(u);
+            } else {
+                // Only sign in anonymously if no user is signed in and we aren't in a loading state
+                // But actually, for Google Auth flow, we want to allow staying signed out or sign in anonymously as fallback?
+                // For this app, let's keep the anonymous fallback for new users, but allow Google Sign In to override.
+                // However, onAuthStateChanged fires with null on logout. We don't want to immediately sign in anonymously again if they just logged out?
+                // Let's safe-guard: if no user, try anonymous.
+                try {
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    console.error("Anon auth failed", e);
+                }
             }
         });
         return () => unsubscribe();
     }, []);
+
+    const handleGoogleLogin = async () => {
+        if (!auth) return;
+        const provider = new GoogleAuthProvider();
+        try {
+            await signInWithPopup(auth, provider);
+        } catch (error) {
+            console.error("Google Sign-In Error:", error);
+            showToast(`Login failed: ${error.message}`);
+        }
+    };
+
+    const handleLogout = async () => {
+        if (!auth) return;
+        try {
+            await signOut(auth);
+            // After sign out, the onAuthStateChanged will likely trigger anonymous login again, which is fine for this app's design (always usable).
+            showToast('Signed out');
+        } catch (error) {
+            console.error("Logout Error:", error);
+        }
+    };
 
     // --- Check for Share Link ---
     useEffect(() => {
@@ -390,17 +413,46 @@ export default function App() {
                     {isReadOnly && <span className="text-[10px] bg-[#E5DED4] px-2 py-0.5 rounded-full uppercase tracking-tighter">Shared View</span>}
                 </div>
 
-                <div className="flex items-center gap-3 flex-1 max-w-2xl">
-                    <div className="relative flex-1">
+                <div className="flex items-center gap-3 flex-1 max-w-2xl justify-end">
+                    <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717171]" />
                         <input
                             type="text"
-                            placeholder="Search items, spaces, notes..."
+                            placeholder="Search items..."
                             className="w-full bg-[#F5F5F5] border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-[#D2B48C] transition-all"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
+
+                    {/* User Profile / Auth */}
+                    {user && (
+                        <div className="flex items-center gap-2 ml-2">
+                            {user.photoURL ? (
+                                <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-[#ECECEC]" title={user.displayName || user.email} />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-[#F5F5F5] flex items-center justify-center text-[#717171] font-bold text-xs" title="Anonymous User">
+                                    {user.isAnonymous ? 'A' : (user.email ? user.email[0].toUpperCase() : 'U')}
+                                </div>
+                            )}
+
+                            {user.isAnonymous ? (
+                                <button
+                                    onClick={handleGoogleLogin}
+                                    className="text-xs bg-[#2D2D2D] text-white px-3 py-1.5 rounded-full hover:bg-black transition-colors whitespace-nowrap"
+                                >
+                                    Sign In to Sync
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleLogout}
+                                    className="text-xs text-[#717171] hover:text-[#2D2D2D] px-2 py-1 transition-colors whitespace-nowrap"
+                                >
+                                    Sign Out
+                                </button>
+                            )}
+                        </div>
+                    )}
 
                 </div>
             </header>
