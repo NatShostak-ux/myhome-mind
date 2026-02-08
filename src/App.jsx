@@ -284,6 +284,31 @@ export default function App() {
     };
 
     // --- Filtering ---
+    const getSearchMatches = (item, query) => {
+        if (!query) return [];
+        const q = query.toLowerCase();
+        const matches = [];
+
+        // Checklist: Item Name
+        if ((item.name || '').toLowerCase().includes(q)) {
+            matches.push({ id: `item-${item.id}`, text: item.name, type: 'ITEM' });
+        }
+
+        // Checklist: Options
+        (item.options || []).forEach((opt, idx) => {
+            const modelMatch = (opt.model || '').toLowerCase().includes(q);
+            const storeMatch = (opt.store || '').toLowerCase().includes(q);
+
+            if (modelMatch) {
+                matches.push({ id: `opt-${item.id}-${idx}`, text: `${item.name}: ${opt.model}`, type: 'OPTION' });
+            } else if (storeMatch) {
+                matches.push({ id: `store-${item.id}-${idx}`, text: `${item.name}: ${opt.store} (Store)`, type: 'STORE' });
+            }
+        });
+
+        return matches;
+    };
+
     const matchItem = (item, query) => {
         const q = query.toLowerCase();
         const atomicName = (item.name || '').toLowerCase();
@@ -491,17 +516,18 @@ export default function App() {
                                             <p className="text-[10px] uppercase tracking-widest text-[#717171] mb-2">Matches found:</p>
                                             <div className="flex flex-wrap gap-2">
                                                 {items
-                                                    .filter(i => i.spaceId === space.id && matchItem(i, searchQuery))
+                                                    .filter(i => i.spaceId === space.id)
+                                                    .flatMap(i => getSearchMatches(i, searchQuery))
                                                     .slice(0, 3)
                                                     .map(match => (
                                                         <span key={match.id} className="text-xs bg-[#F5F5F5] px-2 py-1 rounded-md text-[#2D2D2D]">
-                                                            {match.name}
+                                                            {match.text}
                                                         </span>
                                                     ))
                                                 }
-                                                {items.filter(i => i.spaceId === space.id && matchItem(i, searchQuery)).length > 3 && (
+                                                {items.filter(i => i.spaceId === space.id).flatMap(i => getSearchMatches(i, searchQuery)).length > 3 && (
                                                     <span className="text-xs text-[#717171] self-center">
-                                                        +{items.filter(i => i.spaceId === space.id && matchItem(i, searchQuery)).length - 3}
+                                                        +{items.filter(i => i.spaceId === space.id).flatMap(i => getSearchMatches(i, searchQuery)).length - 3}
                                                     </span>
                                                 )}
                                             </div>
