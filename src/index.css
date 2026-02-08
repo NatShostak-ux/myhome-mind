@@ -6,6 +6,10 @@
 
 @layer base {
     body {
-        @apply antialiased text-[#2D2D2D];
+        @apply antialiased text-[#2D2D2D] min-h-[100dvh];
+    }
+
+    #root {
+        @apply min-h-[100dvh];
     }
 }

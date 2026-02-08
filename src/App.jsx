@@ -462,7 +462,7 @@ export default function App() {
     );
 
     return (
-        <div className="min-h-screen bg-[#FBFBF9] text-[#2D2D2D] selection:bg-[#E5DED4] relative" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <div className="min-h-[100dvh] bg-[#FBFBF9] text-[#2D2D2D] selection:bg-[#E5DED4] relative" style={{ fontFamily: 'Outfit, sans-serif' }}>
 
             {/* Toast Notification */}
             {toast && (
@@ -766,7 +766,7 @@ export default function App() {
             </main>
 
             {/* Main Navigation - Fixed at bottom of flex column */}
-            <nav className="fixed bottom-0 left-0 w-full md:relative md:w-auto bg-white md:bg-transparent border-t md:border-none border-[#ECECEC] flex md:justify-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-2 z-50 transition-all duration-300">
+            <nav className="fixed bottom-0 left-0 w-full md:relative md:w-auto bg-white md:bg-transparent border-t md:border-none border-[#ECECEC] flex md:justify-center p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:pb-2 z-50">
                 <div className="flex w-full md:w-auto md:bg-white md:p-1.5 md:rounded-full md:shadow-sm md:border md:border-[#ECECEC] gap-2">
                     <button
                         onClick={() => setActiveTab('groceries')}
